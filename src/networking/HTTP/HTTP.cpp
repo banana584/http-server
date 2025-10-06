@@ -37,7 +37,6 @@ static std::vector<std::string> split(const std::string& s, char delim) {
 }
 
 HTTP::Requests::HTTPRequest::HTTPRequest(std::string raw) {
-    ////std::cout << raw << "\n";
     if (raw.empty()) {
         return;
     }
@@ -79,7 +78,6 @@ HTTP::Requests::HTTPRequest::HTTPRequest(std::string raw) {
             }
         }
 
-        ////header_name = header_name.substr(0, header_name.find_last_not_of(' ')) + header_name.substr(header_name.find_last_not_of(' ') + 1);
         header_value = header_value.substr(0, header_value.find_last_not_of(' ')) + header_value.substr(header_value.find_last_not_of(' ') + 1);
 
         this->headers.insert(std::make_pair(header_name, header_value));
@@ -317,11 +315,8 @@ HTTP::Responses::HTTPResponse HTTP::Responses::ResponseBuilder::build(HTTP::Requ
     // TODO: Implement response building.
     HTTP::Responses::HTTPResponse response(200, std::map<std::string,std::string>({{"Content-Type", "text/html"}, {"Connection", "keep-alive"}}), "");
 
-    ////std::cout << request.toString() << "\n";
-    ////std::cout << "request url: " << request.url << "\n";
     std::pair<std::string,std::string> url = split_url(request.url);
 
-    ////std::cout << "url.first: " << url.first << " tree->url_part " << tree->url_part << "\n";
     if (url.first != tree->url_part) {
         response.status = 400;
         response.body = "<!DOCTYPE html><html><head><title>Error</title></head><body><h1>An error ocurred</h1><p>The url in request is different to the url of this site</p></body></html>";
