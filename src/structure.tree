@@ -1,0 +1,4 @@
+web 127.0.0.1:8080 url 127.0.0.1:8080 path /home/alex-watts/projects/deep-search/src/templates/index.html
+pge 127.0.0.1:8080 url /thing path /home/alex-watts/projects/deep-search/src/templates/thing.html
+pth 127.0.0.1:8080 url /this path /home/alex-watts/projects/deep-search/src/templates/thing.html
+pge /this url /thing.html path /home/alex-watts/projects/deep-search/src/templates/index.html
