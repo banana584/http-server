@@ -50,7 +50,7 @@ void client() {
 int main(int argc, char* argv[]) {
     HTTP::Servers::HTTPServer server("/home/alex-watts/projects/http-server/src/structure.tree");
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    ////std::this_thread::sleep_for(std::chrono::seconds(5));
 
     server.HandleClients(-1);
 

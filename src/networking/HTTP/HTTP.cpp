@@ -485,8 +485,8 @@ std::vector<std::unique_ptr<HTTP::Servers::Data>> HTTP::Servers::HTTPServer::Rea
 
     for (int i = 0; i < num_events; i++) {
         if (events[i].data.fd == socket->get_fd()) {
-            // Accept new client connection
-            AcceptClients();
+            // Skip incomming connections.
+            continue;
         } else {
             // Handle client socket events
             int client_fd = events[i].data.fd;
