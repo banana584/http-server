@@ -11,7 +11,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
-#include <poll.h>
+#include <sys/epoll.h>
 #include "../sockets/sockets.hpp"
 
 namespace HTTP {
@@ -122,14 +122,17 @@ namespace HTTP {
         class HTTPServer {
             private:
                 std::mutex clients_mutex;
-                std::thread accept_thread;
             protected:
                 std::unique_ptr<Sockets::Socket> socket;
-                struct pollfd server_fd;
-                std::vector<struct pollfd> fds;
+                int epoll_fd;
+                struct epoll_event events[100]; // Temporary value, TODO: Change to be dynamic or have a set value chosen in constructor.
                 Responses::ResponseBuilder response_builder;
             public:
                 bool running;
+            private:
+                void AcceptClients();
+
+                void StartAcceptThread();
             protected:
                 std::shared_ptr<Sockets::Socket> get_client(int id);
             public:

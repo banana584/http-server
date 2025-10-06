@@ -37,7 +37,7 @@ static std::vector<std::string> split(const std::string& s, char delim) {
 }
 
 HTTP::Requests::HTTPRequest::HTTPRequest(std::string raw) {
-    std::cout << raw << "\n";
+    ////std::cout << raw << "\n";
     if (raw.empty()) {
         return;
     }
@@ -317,11 +317,11 @@ HTTP::Responses::HTTPResponse HTTP::Responses::ResponseBuilder::build(HTTP::Requ
     // TODO: Implement response building.
     HTTP::Responses::HTTPResponse response(200, std::map<std::string,std::string>({{"Content-Type", "text/html"}, {"Connection", "keep-alive"}}), "");
 
-    std::cout << request.toString() << "\n";
-    std::cout << "request url: " << request.url << "\n";
+    ////std::cout << request.toString() << "\n";
+    ////std::cout << "request url: " << request.url << "\n";
     std::pair<std::string,std::string> url = split_url(request.url);
 
-    std::cout << "url.first: " << url.first << " tree->url_part " << tree->url_part << "\n";
+    ////std::cout << "url.first: " << url.first << " tree->url_part " << tree->url_part << "\n";
     if (url.first != tree->url_part) {
         response.status = 400;
         response.body = "<!DOCTYPE html><html><head><title>Error</title></head><body><h1>An error ocurred</h1><p>The url in request is different to the url of this site</p></body></html>";
@@ -380,66 +380,49 @@ HTTP::Servers::HTTPServer::HTTPServer(std::string website_tree_filename) {
     server->Bind();
     server->Listen(1);
     this->socket = std::move(server);
-    this->server_fd.fd = this->socket->get_fd();
-    this->server_fd.events = POLLIN;
-    this->server_fd.revents = 0;
-    this->running = 1;
-    this->accept_thread = std::thread([this]() -> void {
-        while (this->running == 1) {
-            int poll_result = poll(&this->server_fd, 1, -1);
-            if (poll_result == -1) {
-                std::cerr << "Error occurred in poll on accept thread: " << strerror(errno) << "\n";
-                continue;
-            }
-            if (!(this->server_fd.revents & POLLIN)) {
-                continue;
-            }
-            sockaddr_in client_addr = {0, 0, 0, 0};
-            socklen_t client_addr_len = sizeof(client_addr);
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
-
-            fd_set read_fd;
-            struct timeval timeout;
-
-            FD_SET(this->socket->get_fd(), &read_fd);
-
-            timeout.tv_sec = 100 / 1000;
-            timeout.tv_usec = (100 % 1000) * 1000;
-
-            int result = select(this->socket->get_fd() + 1, &read_fd, NULL, NULL, &timeout);
-            if (result == -1) {
-                std::cerr << "Error occurred in select on accept thread: " << strerror(errno) << "\n";
-                continue;
-            } else if (result == 0) {
-                continue;
-            }
-
-            int client_fd = accept(this->socket->get_fd(), (struct sockaddr*)&client_addr, &client_addr_len);
-            if (client_fd < 0) {
-                perror("Failed to accept client");
-                continue;
-            }
-            std::shared_ptr<Sockets::Socket> client = nullptr;
-            client = std::make_shared<Sockets::Socket>(client_fd, this->socket->domain, this->socket->type, reinterpret_cast<sockaddr&>(client_addr));
-            this->socket->clients.push_back(client);
-            
-            if (!client) {
-                std::cout << "Accept failed\n";
-                exit(-1);
-                continue;
-            }
-            struct pollfd fd;
-            fd.fd = client->get_fd();
-            fd.events = POLLIN | POLLOUT;
-            this->fds.push_back(fd);
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-    });
+    StartAcceptThread();
 }
 
 HTTP::Servers::HTTPServer::~HTTPServer() {
     this->running = 0;
-    this->accept_thread.join();
+}
+
+void HTTP::Servers::HTTPServer::StartAcceptThread() {
+    epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+
+    epoll_event event;
+    event.events = EPOLLIN;
+    event.data.fd = socket->get_fd();
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, socket->get_fd(), &event);
+
+    std::thread accept_thread([this]() {
+        while (this->running) {
+            int num_events = epoll_wait(this->epoll_fd, this->events, 100, -1);
+
+            if (num_events == -1) {
+                perror("epoll_wait");
+                continue;
+            }
+
+            for (int i = 0; i < num_events; i++) {
+                if (this->events[i].data.fd == this->socket->get_fd()) {
+                    AcceptClients();
+                }
+            }
+        }
+    });
+
+    accept_thread.detach();
+}
+
+void HTTP::Servers::HTTPServer::AcceptClients() {
+    std::lock_guard<std::mutex> lock(clients_mutex);
+    std::shared_ptr<Sockets::Socket> client = socket->Accept();
+
+    epoll_event event;
+    event.events = EPOLLIN;
+    event.data.fd = client->get_fd();
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client->get_fd(), &event);
 }
 
 std::shared_ptr<Sockets::Socket> HTTP::Servers::HTTPServer::get_client(int id) {
@@ -491,24 +474,32 @@ std::unique_ptr<HTTP::Servers::Data> HTTP::Servers::HTTPServer::ReadClient(Socke
 }
 
 std::vector<std::unique_ptr<HTTP::Servers::Data>> HTTP::Servers::HTTPServer::ReadClients() {
-    int ret = poll(fds.data(), fds.size(), -1);
+    int num_events = epoll_wait(epoll_fd, events, 100, -1);
+
+    if (num_events == -1) {
+        // Handle error
+        return {};
+    }
 
     std::vector<std::unique_ptr<HTTP::Servers::Data>> requests;
 
-    if (ret <= 0) {
-        return requests;
-    }
-
-    for (size_t i = 0; i < fds.size(); i++) {
-        struct pollfd fd = fds[i];
-        Sockets::Socket client = *socket->clients[i];
-        if (fd.revents & POLLIN) {
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
-            std::string recieved = socket->Recv(client);
-            std::unique_ptr<HTTP::Servers::Data> data = std::make_unique<HTTP::Servers::Data>(i, std::make_shared<Sockets::Socket>(client), HTTP::Requests::HTTPRequest(recieved));
-            requests.push_back(std::move(data));
+    for (int i = 0; i < num_events; i++) {
+        if (events[i].data.fd == socket->get_fd()) {
+            // Accept new client connection
+            AcceptClients();
+        } else {
+            // Handle client socket events
+            int client_fd = events[i].data.fd;
+            std::shared_ptr<Sockets::Socket> client = socket->clients[i];
+            if (events[i].events & EPOLLIN) {
+                std::lock_guard<std::mutex> lock(clients_mutex);
+                std::string received = socket->Recv(*client);
+                std::unique_ptr<HTTP::Servers::Data> data = std::make_unique<HTTP::Servers::Data>(client_fd, client, HTTP::Requests::HTTPRequest(received));
+                requests.push_back(std::move(data));
+            }
         }
     }
+
     return requests;
 }
 
@@ -520,6 +511,7 @@ int HTTP::Servers::HTTPServer::WriteClient(int id, HTTP::Requests::HTTPRequest& 
     Sockets::Socket client = *socket->clients.at(id);
 
     std::string send = response.toString();
+    std::cout << "does this show" << "\n";
     int res = socket->Send(client, send);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -533,6 +525,7 @@ int HTTP::Servers::HTTPServer::WriteClient(Sockets::Socket& client, HTTP::Reques
     HTTP::Responses::HTTPResponse response = response_builder.build(request);
 
     std::string send = response.toString();
+    std::cout << send << "\n";
     int res = socket->Send(client, send);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
