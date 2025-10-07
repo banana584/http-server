@@ -196,7 +196,7 @@ HTTP::Responses::Node::Node() {
     this->file_path = std::string();
 }
 
-HTTP::Responses::Node HTTP::Responses::Node::operator=(const HTTP::Responses::Node& other) {
+HTTP::Responses::Node& HTTP::Responses::Node::operator=(const HTTP::Responses::Node& other) {
     if (this == nullptr || this == NULL || this == 0x0) {
         throw std::invalid_argument("This value is nullptr");
     }

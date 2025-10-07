@@ -189,6 +189,8 @@ namespace HTTP {
                  * @param type The type of the node.
                  * @param url_part The section of url this node owns.
                  * @param file_path The path to the file to be read.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 Node(const Node& parent, NodeType type, std::string url_part, std::string file_path);
 
@@ -198,49 +200,103 @@ namespace HTTP {
                  * @param type The type of the node.
                  * @param url_part The section of url this node owns.
                  * @param file_path The path to the file to be read.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 Node(std::shared_ptr<Node> parent, NodeType type, std::string url_part, std::string file_path);
 
                 /**
                  * @brief Copy constructor for Node.
                  * @param other A const reference to another node to copy all data into this.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 Node(const Node& other);
 
                 /**
                  * @brief Default constructor for Node.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 Node();
 
                 /**
                  * @brief Copy operator overwrite.
                  * @param other A const reference to another node to copy all data into new node.
-                 * @return A newly created Node instance.
+                 * @return A newly created Node reference.
+                 * @author banana584
+                 * @date 6/10/25
                  */
-                Node operator=(const Node& other);
+                Node& operator=(const Node& other);
 
                 /**
                  * @brief Destructor to clean up resources.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 ~Node();
         };
 
+        /**
+         * @class ResponseBuilder
+         * @brief A class to build responses from requests.
+         * @author banana584
+         * @date 6/10/25
+         */
         class ResponseBuilder {
             private:
-                std::string filename;
+                std::string filename; ///< Name of file dictacting tree structure.
             protected:
-                std::ifstream file;
+                std::ifstream file; ///< File dictating tree structure.
             public:
-                std::shared_ptr<Node> tree;
+                std::shared_ptr<Node> tree; ///< Shared pointer to head of tree parsed from file.
             public:
+                /**
+                 * @brief Default constructor.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ResponseBuilder();
+
+                /**
+                 * @brief Consructor.
+                 * @param filename The name of the file to parse website structure from.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ResponseBuilder(std::string filename);
+
+                /**
+                 * @brief Copy constructor.
+                 * @param other A const reference to another instance of this class to copy.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ResponseBuilder(const ResponseBuilder& other);
 
+                /**
+                 * @brief Builds a response from a request.
+                 * @param request A reference to a request to read and generate a response from.
+                 * @return A response generated from the request.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 HTTPResponse build(Requests::HTTPRequest& request);
 
+                /**
+                 * @brief Copy operator overwrite.
+                 * @param other A reference to another instance.
+                 * @return A reference to an instance of this class copied from the other param.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ResponseBuilder& operator=(const ResponseBuilder& other);
 
+                /**
+                 * @brief Destructor to clean up resources.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ~ResponseBuilder();
         };
     }
@@ -252,17 +308,49 @@ namespace HTTP {
      * @date 6/10/25
      */
     namespace Servers {
+        /**
+         * @struct Data
+         * @brief Represents a piece of data recieved or sent from/to a client.
+         * @author banana584
+         * @date 6/10/25
+         */
         struct Data {
-            int id;
-            std::shared_ptr<Sockets::Socket> client;
+            int id; ///< The id of the client read from.
+            std::shared_ptr<Sockets::Socket> client; ///< A shared pointer to a client that was read from.
+            enum {
+                REQUEST,
+                RESPONSE
+            } type; ///< The type of data - request or response.
             union {
-                Requests::HTTPRequest request;
+                Requests::HTTPRequest request; 
                 Responses::HTTPResponse response;
-            };
+            }; ///< The actual data - request or response.
 
+            /**
+             * @brief Constructor.
+             * @param id The id of the client the data comes from.
+             * @param client The client the data comes from.
+             * @param request The request of the data.
+             * @author banana584
+             * @date 6/10/25
+             */
             Data(int id, std::shared_ptr<Sockets::Socket> client, Requests::HTTPRequest request) 
-                : id(id), client(client), request(request) {}
+                : id(id), client(client), request(request) {type = REQUEST;}
 
+            /**
+             * @brief Constructor.
+             * @param id The id of the client the data comes from.
+             * @param client The client the data comes from.
+             * @param response The response of the data.
+             * @author banana584
+             * @date 6/10/25
+             */
+            Data(int id, std::shared_ptr<Sockets::Socket> client, Responses::HTTPResponse response)
+                : id(id), client(client), response(response) {type = RESPONSE;}
+
+            /**
+             * @brief Destructor the clean up resources.
+             */
             ~Data() {}
         };
 
