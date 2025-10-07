@@ -411,7 +411,7 @@ void HTTP::Servers::HTTPServer::StartAcceptThread() {
 }
 
 void HTTP::Servers::HTTPServer::AcceptClients() {
-    std::lock_guard<std::mutex> lock(clients_mutex);
+    std::lock_guard<std::mutex> lock(sockets_mutex);
     std::shared_ptr<Sockets::Socket> client = socket->Accept();
 
     epoll_event event;
@@ -420,23 +420,8 @@ void HTTP::Servers::HTTPServer::AcceptClients() {
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client->get_fd(), &event);
 }
 
-std::shared_ptr<Sockets::Socket> HTTP::Servers::HTTPServer::get_client(int id) {
-    int i = 0;
-    std::lock_guard<std::mutex> lock(this->clients_mutex);
-    for (std::shared_ptr<Sockets::Socket>& client : this->socket->clients) {
-        if (i == id) {
-            return std::shared_ptr<Sockets::Socket>(new Sockets::Socket(*client), [this](Sockets::Socket* ptr) {
-                std::lock_guard<std::mutex> lock(this->clients_mutex);
-                delete ptr;
-            });
-        }
-        i++;
-    }
-    return nullptr;
-}
-
 std::unique_ptr<HTTP::Servers::Data> HTTP::Servers::HTTPServer::ReadClient(int id) {
-    std::lock_guard<std::mutex> lock(this->clients_mutex);
+    std::lock_guard<std::mutex> lock(this->sockets_mutex);
 
     Sockets::Socket client = *socket->clients.at(id);
 
@@ -447,7 +432,7 @@ std::unique_ptr<HTTP::Servers::Data> HTTP::Servers::HTTPServer::ReadClient(int i
 }
 
 std::unique_ptr<HTTP::Servers::Data> HTTP::Servers::HTTPServer::ReadClient(Sockets::Socket& client) {
-    std::lock_guard<std::mutex> lock(this->clients_mutex);
+    std::lock_guard<std::mutex> lock(this->sockets_mutex);
 
     std::string recieved = socket->Recv(client);
 
@@ -487,7 +472,7 @@ std::vector<std::unique_ptr<HTTP::Servers::Data>> HTTP::Servers::HTTPServer::Rea
             int client_fd = events[i].data.fd;
             std::shared_ptr<Sockets::Socket> client = socket->clients[i];
             if (events[i].events & EPOLLIN) {
-                std::lock_guard<std::mutex> lock(clients_mutex);
+                std::lock_guard<std::mutex> lock(sockets_mutex);
                 std::string received = socket->Recv(*client);
                 std::unique_ptr<HTTP::Servers::Data> data = std::make_unique<HTTP::Servers::Data>(client_fd, client, HTTP::Requests::HTTPRequest(received));
                 requests.push_back(std::move(data));
@@ -499,7 +484,7 @@ std::vector<std::unique_ptr<HTTP::Servers::Data>> HTTP::Servers::HTTPServer::Rea
 }
 
 int HTTP::Servers::HTTPServer::WriteClient(int id, HTTP::Requests::HTTPRequest& request) {
-    std::lock_guard<std::mutex> lock(this->clients_mutex);
+    std::lock_guard<std::mutex> lock(this->sockets_mutex);
 
     HTTP::Responses::HTTPResponse response = response_builder.build(request);
 
@@ -515,7 +500,7 @@ int HTTP::Servers::HTTPServer::WriteClient(int id, HTTP::Requests::HTTPRequest& 
 }
 
 int HTTP::Servers::HTTPServer::WriteClient(Sockets::Socket& client, HTTP::Requests::HTTPRequest& request) {
-    std::lock_guard<std::mutex> lock(this->clients_mutex);
+    std::lock_guard<std::mutex> lock(this->sockets_mutex);
 
     HTTP::Responses::HTTPResponse response = response_builder.build(request);
 
@@ -570,7 +555,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(int id, std::shar
         timeout_lock.lock();
         while (this->running && *stop_flag == 0 && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientCycle(id);
             timeout_lock.lock();
         }
@@ -602,7 +587,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(int id, int timeo
         timeout_lock.lock();
         while (this->running && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientCycle(id);
             timeout_lock.lock();
         }
@@ -634,7 +619,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(std::shared_ptr<S
         timeout_lock.lock();
         while (this->running && *stop_flag == 0 && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientCycle(*client);
             timeout_lock.lock();
         }
@@ -666,7 +651,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(std::shared_ptr<S
         timeout_lock.lock();
         while (this->running && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientCycle(*client);
             timeout_lock.lock();
         }
@@ -698,7 +683,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientsHandleThread(std::shared_ptr<
         timeout_lock.lock();
         while (this->running && *stop_flag == 0 && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientsCycle();
             timeout_lock.lock();
         }
@@ -727,7 +712,7 @@ std::thread HTTP::Servers::HTTPServer::StartClientsHandleThread(int timeout) {
         timeout_lock.lock();
         while (this->running && timeout_reached == 0) {
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->clients_mutex);
+            std::lock_guard<std::mutex> lock(this->sockets_mutex);
             HandleClientsCycle();
             timeout_lock.lock();
         }

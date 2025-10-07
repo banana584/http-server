@@ -354,48 +354,195 @@ namespace HTTP {
             ~Data() {}
         };
 
+        /**
+         * @class HTTPServer
+         * @brief A HTTP server that handles clients.
+         * @author banana584
+         * @date 6/10/25
+         */
         class HTTPServer {
             private:
-                std::mutex clients_mutex;
+                std::mutex sockets_mutex; ///< A mutex to protect sockets.
             protected:
-                std::unique_ptr<Sockets::Socket> socket;
-                int epoll_fd;
-                struct epoll_event events[100]; // Temporary value, TODO: Change to be dynamic or have a set value chosen in constructor.
-                Responses::ResponseBuilder response_builder;
+                std::unique_ptr<Sockets::Socket> socket; ///< A unique pointer to the server socket.
+                int epoll_fd; ///< The epoll fd of the server - for using epoll on clients.
+                struct epoll_event events[100]; ///< An array of epoll events - will change to a vector later. // Temporary value, TODO: Change to be dynamic or have a set value chosen in constructor.
+                Responses::ResponseBuilder response_builder; ///< An instance of the response builder class for handling clients.
             public:
-                bool running;
+                bool running; ///< A value on if the server is running.
             private:
+                /**
+                 * @brief Accepts a client and sets up epoll to work for them.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 void AcceptClients();
 
+                /**
+                 * @brief Starts a thread to accept clients.
+                 * @see AcceptClients.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 void StartAcceptThread();
-            protected:
-                std::shared_ptr<Sockets::Socket> get_client(int id);
             public:
+                /**
+                 * @brief Constructor
+                 * @param website_tree_filename The name of the file to be parsed by ResponseBuilder.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 HTTPServer(std::string website_tree_filename);
 
+                /**
+                 * @brief Destructor to clean up resources
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 ~HTTPServer();
 
+                /**
+                 * @brief Reads data from a client by id.
+                 * @param id The id of the client to read data from.
+                 * @warning Is blocking so either know this client is ready to be read from or wait.
+                 * @return A unique pointer to an instance of the Data struct.
+                 * @see Data
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 std::unique_ptr<Data> ReadClient(int id);
+
+                /**
+                 * @brief Reads data from a client by socket reference.
+                 * @param client A reference to a socket to read from.
+                 * @warning Is blocking so either know this client is ready to be read from or wait.
+                 * @return A unique pointer to an instance of the Data struct.
+                 * @see Data
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 std::unique_ptr<Data> ReadClient(Sockets::Socket& client);
 
+                /**
+                 * @brief Reads data from all clients that are ready to be read from.
+                 * @return A vector of unique pointers of all the data read.
+                 * @see Data
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 std::vector<std::unique_ptr<Data>> ReadClients();
 
+                /**
+                 * @brief Write a response to a client by id.
+                 * @param id The id of the client to write to.
+                 * @param request A reference of a HTTPRequest to generate a response to and write.
+                 * @warning Is blocking until message is finished writing.
+                 * @return 0 for success otherwise an error.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 int WriteClient(int id, Requests::HTTPRequest& request);
+
+                /**
+                 * @brief Write a response to a client by socket reference.
+                 * @param client A reference to a socket to write to.
+                 * @param request A reference of a HTTPRequest to generate a response to and write.
+                 * @warning Is blocking until message is finished writing.
+                 * @return 0 for success otherwise an error.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 int WriteClient(Sockets::Socket& client, Requests::HTTPRequest& request);
 
+                /**
+                 * @brief Reads from a client and writes a response by id.
+                 * @param id The id of the client to handle.
+                 * @warning Is blocking until client is handled.
+                 * @return 0 for success otherwise an error.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 int HandleClientCycle(int id);
+
+                /**
+                 * @brief Reads from a client and writes a response by socket reference.
+                 * @param client A reference to a socket which is the client to handle.
+                 * @warning Is blocking until client is handled.
+                 * @return 0 for success otherwise an error.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 int HandleClientCycle(Sockets::Socket& client);
 
+                /**
+                 * @brief Reads from all clients and writes back to all of them.
+                 * @warning Is blocking until the cycle is completed.
+                 * @return 0 for success otherwise an error.
+                 * @author banana584
+                 * @date 6/10/25
+                 */
                 int HandleClientsCycle();
 
+                /**
+                 * @brief Starts a thread to handle a client by id
+                 * @param id The id of the client to handle.
+                 * @param stop_flag A flag on when the thread should exit.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling the client.
+                 * @warning Can slow down the rest of the server by locking mutexes and can take up more resources.
+                 */
                 std::thread StartClientHandleThread(int id, std::shared_ptr<bool> stop_flag, int timeout);
+
+                /**
+                 * @brief Starts a thread to handle a client by id.
+                 * @param id The id of the client to handle.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling the client.
+                 * @warning Can slow down the rest of the server by locking mutexes and can take up more resources.
+                 */
                 std::thread StartClientHandleThread(int id, int timeout);
+
+                /**
+                 * @brief Starts a thread to handle a client by socket referece.
+                 * @param client The reference of the client socket to handle.
+                 * @param stop_flag A flag on when the thread should exit.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling the client.
+                 * @warning Can slow down the rest of the server by locking mutexes and can take up more resources.
+                 */
                 std::thread StartClientHandleThread(std::shared_ptr<Sockets::Socket> client, std::shared_ptr<bool> stop_flag, int timeout);
+
+                /**
+                 * @brief Starts a thread to handle a client by socket reference.
+                 * @param client The reference of the client socket to handle.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling the client.
+                 * @warning Can slow down the rest of the server by locking mutexes and can take up more resources.
+                 */
                 std::thread StartClientHandleThread(std::shared_ptr<Sockets::Socket> client, int timeout);
 
+                /**
+                 * @brief Starts a thread to handle clients.
+                 * @param stop_flag A flag on when the thread should exit.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling clients.
+                 * @warning Can take up more resources by starting a new thread.
+                 */
                 std::thread StartClientsHandleThread(std::shared_ptr<bool> stop_flag, int timeout);
+
+                /**
+                 * @brief Starts a thread to handle clients.
+                 * @param timeout A timeout for the thread, if there is no timeout enter -1.
+                 * @return The newly created thread for handling clients.
+                 * @warning Can take up more resources by starting a new thread.
+                 */
                 std::thread StartClientsHandleThread(int timeout);
 
+                /**
+                 * @brief Starts handling clients.
+                 * @param timeout A timeout for the handling, if there is no timeout enter -1.
+                 * @warning Blocks until the timeout is up, and if there is no timeout no code after this will run.
+                 */
                 void HandleClients(int timeout);
         };
     }
