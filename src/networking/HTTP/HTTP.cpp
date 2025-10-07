@@ -670,8 +670,13 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(int id, std::shar
     if (timeout > 0) {
         // If there is a timeout start a thread to sleep and then trigger timeout mutex.
         std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
+
+            // Lock timeout mutex.
             std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
             timeout_reached = 1;
         });
         // Will automatically close itself so no need to join.
@@ -702,177 +707,259 @@ std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(int id, std::shar
 }
 
 std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(int id, int timeout) {
+    // Create a mutex for timeout.
     std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
+    // Create flag for timeout reached.
     bool timeout_reached = 0;
-    bool done = 0;
     if (timeout > 0) {
-        std::thread sleep_thread([timeout,&timeout_reached,done,timeout_mutex]() {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
+        std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            {
-                std::lock_guard<std::mutex> lock(*timeout_mutex);
-                timeout_reached = 1;
-            }
-            while (done == 0) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
+
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
+            timeout_reached = 1;
         });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
     }
 
-    std::thread thread([this,id,timeout_reached,&done,timeout_mutex]() {
+    // Start a thread to handle a client.
+    std::thread thread([this,id,timeout_reached,timeout_mutex]() {
+        // Create a lock
         std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+        // Lock timeout mutex so we can check.
         timeout_lock.lock();
+        // Loop until the server stops running or the timeout is reached.
         while (this->running && timeout_reached == 0) {
+            // Unlock the timeout mutex.
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->sockets_mutex);
+
+            // Handle the client.
             HandleClientCycle(id);
+
+            // Lock the timeout mutex so we can check.
             timeout_lock.lock();
         }
-        done = 1;
     });
 
+    // Return thread so user can join, detach etc.
     return thread;
 }
 
 std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(std::shared_ptr<Sockets::Socket> client, std::shared_ptr<bool> stop_flag, int timeout) {
+    // Create a mutex for timeout.
     std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
+    // Create flag for timeout reached.
     bool timeout_reached = 0;
-    bool done = 0;
     if (timeout > 0) {
-        std::thread sleep_thread([timeout,&timeout_reached,done,timeout_mutex]() {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
+        std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            {
-                std::lock_guard<std::mutex> lock(*timeout_mutex);
-                timeout_reached = 1;
-            }
-            while (done == 0) {
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-            }
+
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
+            timeout_reached = 1;
         });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
     }
 
-    std::thread thread([this,client=std::dynamic_pointer_cast<Sockets::Socket>(client),stop_flag,timeout_reached,&done,timeout_mutex]() {
+    // Start a thread to handle a client.
+    std::thread thread([this,client=std::dynamic_pointer_cast<Sockets::Socket>(client),stop_flag,timeout_reached,timeout_mutex]() {
+        // Create a lock
         std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+        // Lock timeout mutex so we can check.
         timeout_lock.lock();
+        // Loop until the server stops running, stop flag is set or the timeout is reached.
         while (this->running && *stop_flag == 0 && timeout_reached == 0) {
+            // Unlock the timeout mutex.
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->sockets_mutex);
+
+            // Handle the client.
             HandleClientCycle(*client);
+
+            // Lock the timeout mutex so we can check.
             timeout_lock.lock();
         }
-        done = 1;
     });
 
+    // Return thread so user can join, detach etc.
     return thread;
 }
 
 std::thread HTTP::Servers::HTTPServer::StartClientHandleThread(std::shared_ptr<Sockets::Socket> client, int timeout) {
+    // Create a mutex for timeout.
     std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
+    // Create flag for timeout reached.
     bool timeout_reached = 0;
-    bool done = 0;
     if (timeout > 0) {
-        std::thread sleep_thread([timeout,&timeout_reached,done,timeout_mutex]() {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
+        std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            {
-                std::lock_guard<std::mutex> lock(*timeout_mutex);
-                timeout_reached = 1;
-            }
-            while (done == 0) {
-                std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            }
+
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
+            timeout_reached = 1;
         });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
     }
 
-    std::thread thread([this,client=std::dynamic_pointer_cast<Sockets::Socket>(client),timeout_reached,&done,timeout_mutex]() {
+    // Start a thread to handle a client.
+    std::thread thread([this,client=std::dynamic_pointer_cast<Sockets::Socket>(client),timeout_reached,timeout_mutex]() {
+        // Create a lock
         std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+        // Lock timeout mutex so we can check.
         timeout_lock.lock();
+        // Loop until the server stops running or the timeout is reached.
         while (this->running && timeout_reached == 0) {
+            // Unlock the timeout mutex.
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->sockets_mutex);
+
+            // Handle the client.
             HandleClientCycle(*client);
+
+            // Lock the timeout mutex so we can check.
             timeout_lock.lock();
         }
-        done = 1;
     });
 
+    // Return thread so user can join, detach etc.
     return thread;
 }
 
 std::thread HTTP::Servers::HTTPServer::StartClientsHandleThread(std::shared_ptr<bool> stop_flag, int timeout) {
+    // Create a mutex for timeout.
     std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
+    // Create flag for timeout reached.
     bool timeout_reached = 0;
-    bool done = 0;
     if (timeout > 0) {
-        std::thread sleep_thread([timeout,&timeout_reached,done,timeout_mutex]() {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
+        std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            {
-                std::lock_guard<std::mutex> lock(*timeout_mutex);
-                timeout_reached = 1;
-            }
-            while (done == 0) {
-                std::this_thread::sleep_for(std::chrono::seconds(timeout));
-            }
+
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
+            timeout_reached = 1;
         });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
     }
 
-    std::thread thread([this,stop_flag,timeout_reached,&done,timeout_mutex] {
+    // Start a thread to handle a client.
+    std::thread thread([this,stop_flag,timeout_reached,timeout_mutex] {
+        // Create a lock
         std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+        // Lock timeout mutex so we can check.
         timeout_lock.lock();
+        // Loop until the server stops running, stop flag is set or the timeout is reached.
         while (this->running && *stop_flag == 0 && timeout_reached == 0) {
+            // Unlock the timeout mutex.
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->sockets_mutex);
+
+            // Handle the clients.
             HandleClientsCycle();
+
+            // Lock the timeout mutex so we can check.
             timeout_lock.lock();
         }
-        done = 1;
     });
 
+    // Return thread so user can join, detach etc.
     return thread;
 }
 
 std::thread HTTP::Servers::HTTPServer::StartClientsHandleThread(int timeout) {
+    // Create a mutex for timeout.
     std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
-
-    std::thread thread([this,timeout,timeout_mutex]() {
-        bool timeout_reached = 0;
+    // Create flag for timeout reached.
+    bool timeout_reached = 0;
+    if (timeout > 0) {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
         std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
-            if (timeout > 0) {
-                std::this_thread::sleep_for(std::chrono::seconds(timeout));
-                {
-                    std::lock_guard<std::mutex> lock(*timeout_mutex);
-                    timeout_reached = 1;
-                }
-            }
-        });
+            // Sleep for timeout.
+            std::this_thread::sleep_for(std::chrono::seconds(timeout));
 
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
+            timeout_reached = 1;
+        });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
+    }
+
+    // Start a thread to handle a client.
+    std::thread thread([this,timeout_reached,timeout_mutex]() {
+        // Create a lock
         std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+        // Lock timeout mutex so we can check.
         timeout_lock.lock();
+        // Loop until the server stops running or the timeout is reached.
         while (this->running && timeout_reached == 0) {
+            // Unlock the timeout mutex.
             timeout_lock.unlock();
-            std::lock_guard<std::mutex> lock(this->sockets_mutex);
+
+            // Handle the clients.
             HandleClientsCycle();
+
+            // Lock the timeout mutex so we can check.
             timeout_lock.lock();
         }
-        sleep_thread.join();
     });
 
+    // Return thread so user can join, detach etc.
     return thread;
 }
 
 void HTTP::Servers::HTTPServer::HandleClients(int timeout) {
-    std::mutex timeout_mutex;
+    // Create a mutex for timeout.
+    std::shared_ptr<std::mutex> timeout_mutex = std::make_shared<std::mutex>();
+    // Create flag for timeout reached.
     bool timeout_reached = 0;
     if (timeout > 0) {
-        std::thread sleep_thread([timeout,&timeout_reached]() {
+        // If there is a timeout start a thread to sleep and then trigger timeout mutex.
+        std::thread sleep_thread([timeout,&timeout_reached,timeout_mutex]() {
+            // Sleep for timeout.
             std::this_thread::sleep_for(std::chrono::seconds(timeout));
+
+            // Lock timeout mutex.
+            std::lock_guard<std::mutex> lock(*timeout_mutex);
+
+            // Set timeout reached flag to 1.
             timeout_reached = 1;
         });
+        // Will automatically close itself so no need to join.
+        sleep_thread.detach();
     }
 
-    std::unique_lock<std::mutex> timeout_lock(timeout_mutex, std::defer_lock);
+    // Create a lock
+    std::unique_lock<std::mutex> timeout_lock(*timeout_mutex, std::defer_lock);
+    // Lock timeout mutex so we can check.
     timeout_lock.lock();
-    while (timeout_reached == 0) {
+    // Loop until the server stops running or the timeout is reached.
+    while (running == 1 && timeout_reached == 0) {
+        // Unlock the timeout mutex.
         timeout_lock.unlock();
+
+        // Handle the clients.
         HandleClientsCycle();
+
+        // Lock the timeout mutex so we can check.
         timeout_lock.lock();
     }
 }
