@@ -1,3 +1,4 @@
+
 #ifndef NETWORKING_HTTP_HTTP_HPP
 #define NETWORKING_HTTP_HTTP_HPP
 
@@ -55,17 +56,23 @@ namespace HTTP {
                 /**
                  * @brief Constructor that parses raw text as a request.
                  * @param raw The raw text to be parsed as a request.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 HTTPRequest(std::string raw);
 
                 /**
                  * @brief Destructor to cleanup resources.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 ~HTTPRequest();
 
                 /**
                  * @brief Converts request to string.
                  * @return Raw text from the data in the request.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 std::string toString();
         };
@@ -74,11 +81,15 @@ namespace HTTP {
     /**
      * @namespace Responses
      * @brief A subset of the HTTP namespace that has classes for HTTP requests.
+     * @author banana584
+     * @date 6/10/25
      */
     namespace Responses {
         /**
          * @enum Status
          * @brief This enum represents HTTP response status codes - currently incomplete but will be finished later.
+         * @author banana584
+         * @date 6/10/25
          */
         enum class Status {
             OK = 200,
@@ -94,12 +105,16 @@ namespace HTTP {
          * @brief Converts a status into a string.
          * @param status A value from the Status enum.
          * @return The text associated with the status code, e.g 200 to OK, 404 to NOT FOUND, etc.
+         * @author banana584
+         * @date 6/10/25
          */
         std::string get_status_string(Status status);
 
         /**
          * @class HTTPResponse
          * @brief This class represents a HTTP response.
+         * @author banana584
+         * @date 6/10/25
          */
         class HTTPResponse {
             public:
