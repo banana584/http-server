@@ -332,7 +332,8 @@ HTTP::Responses::ResponseBuilder::ResponseBuilder(std::string filename) {
         if (node.parent == nullptr && this->tree == nullptr) {
             this->tree = std::make_shared<Node>(node);
         // If the node has a parent add it to the parents children list.
-        } else if (node.parent != nullptr) {
+        } else if (node.parent == nullptr) {
+            node.parent = tree;
             node.parent->children.push_back(std::make_shared<Node>(node));
         }
 
@@ -359,7 +360,7 @@ static std::pair<std::string, std::string> split_url(const std::string& url) {
     // Rest is route.
     if (std::getline(iss, route)) {
         // Add to route.
-        route = route.substr(0, route.size() - 1);
+        route = route.substr(0, route.size());
         if (route.back() == '/') {
             route.pop_back();
         }
@@ -412,7 +413,7 @@ HTTP::Responses::HTTPResponse HTTP::Responses::ResponseBuilder::build(HTTP::Requ
     Node* current = tree.get();
     for (const auto& token : routes) {
         for (std::shared_ptr<Node> node : current->children) {
-            if (node->url_part == token) {
+            if (node->url_part == ('/' + token) || node->url_part == token) {
                 current = node.get();
                 break;
             }
