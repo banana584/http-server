@@ -48,39 +48,7 @@ int Sockets::Socket::Bind() {
     return 0;
 }
 
-int Sockets::Socket::Bind(int fd) {
-    int reuse = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == -1) {
-        perror("Error setting SO_REUSEADDR option");
-        return -1;
-    }
-
-    if (bind(fd, (struct sockaddr*)addr.get(), addr_len) < 0) {
-        std::cerr << "Failed to bind socket: " << strerror(errno) << "\n";
-        return -1;
-    }
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 10000;
-
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout)) == -1) {
-        perror("Error setting SO_SNDTIMEO option");
-        return -1;
-    }
-
-    return 0;
-}
-
 int Sockets::Socket::Listen(int backlog) {
-    if (listen(fd, backlog) < 0) {
-        std::cerr << "Failed to listen socket.\n";
-        return -1;
-    }
-    return 0;
-}
-
-int Sockets::Socket::Listen(int fd, int backlog) {
     if (listen(fd, backlog) < 0) {
         std::cerr << "Failed to listen socket.\n";
         return -1;
@@ -133,66 +101,6 @@ int Sockets::Socket::Send(Socket& socket, std::string& message) {
     return 0;
 }
 
-/*
-std::string Sockets::Socket::Recv(Socket& socket) {
-    std::string message;
-    char buffer[1024] = {0};
-
-    // Read the length of the message from the header
-    ssize_t length_bytes = recv(socket.get_fd(), buffer, sizeof(uint32_t), 0);
-    if (length_bytes < 0) {
-        std::cerr << "Failed to receive message length.\n";
-        return "";
-    }
-    if (length_bytes == 0) {
-        return "";
-    }
-
-    uint32_t length = 0;
-    memcpy(&length, buffer, sizeof(uint32_t));
-
-    // Read the message data
-    ssize_t bytes_read = 0;
-    while ((bytes_read = recv(socket.get_fd(), buffer, length, 0)) > 0) {
-        if (bytes_read < 0) {
-            std::cerr << "Failed to receive message.\n";
-            break;
-        }
-        message += std::string(buffer, bytes_read);
-        length -= bytes_read;
-        if (length == 0) {
-            break;
-        }
-    }
-
-    return message;
-}
-*/
-/*
-std::string Sockets::Socket::Recv(Socket& socket) {
-    std::string message;
-    char buffer[1024] = {0};
-
-    // Read the message data
-    ssize_t bytes_read = 0;
-    while ((bytes_read = recv(socket.get_fd(), buffer, sizeof(buffer), 0)) > 0) {
-        if (bytes_read < 0) {
-            std::cerr << "Failed to receive message.\n";
-            break;
-        }
-        std::cout << "Read: " << buffer << "\n";
-        message += std::string(buffer, bytes_read);
-    }
-    std::cout << "Finished reading\n";
-
-    if (bytes_read < 0) {
-        std::cerr << "Failed to receive message.\n";
-        return "";
-    }
-
-    return message;
-}
-*/
 std::string Sockets::Socket::Recv(Socket& socket) {
     std::string message;
     char buffer[1024] = {0};
