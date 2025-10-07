@@ -3,7 +3,7 @@
 #include "../include/networking/HTTP/HTTP.hpp"
 
 int main(int argc, char* argv[]) {
-    HTTP::Servers::HTTPServer server("/home/alex-watts/projects/http-server/src/structure.tree");
+    HTTP::Servers::HTTPServer server("/home/alex-watts/projects/http-server/src/structure.struct");
 
     server.HandleClients(-1);
 
