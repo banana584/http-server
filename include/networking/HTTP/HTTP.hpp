@@ -183,13 +183,45 @@ namespace HTTP {
                 std::string url_part; ///< The section of url this node owns.
                 std::string file_path; ///< The path to the data needed for creating responses - could be a html file, an API script, etc.
             public:
+                /**
+                 * @brief Constructor for Node.
+                 * @param parent A const reference to another node which is the parent of this new node in the tree.
+                 * @param type The type of the node.
+                 * @param url_part The section of url this node owns.
+                 * @param file_path The path to the file to be read.
+                 */
                 Node(const Node& parent, NodeType type, std::string url_part, std::string file_path);
+
+                /**
+                 * @brief Constructor for Node.
+                 * @param parent A shared pointer to another node.
+                 * @param type The type of the node.
+                 * @param url_part The section of url this node owns.
+                 * @param file_path The path to the file to be read.
+                 */
                 Node(std::shared_ptr<Node> parent, NodeType type, std::string url_part, std::string file_path);
+
+                /**
+                 * @brief Copy constructor for Node.
+                 * @param other A const reference to another node to copy all data into this.
+                 */
                 Node(const Node& other);
+
+                /**
+                 * @brief Default constructor for Node.
+                 */
                 Node();
 
+                /**
+                 * @brief Copy operator overwrite.
+                 * @param other A const reference to another node to copy all data into new node.
+                 * @return A newly created Node instance.
+                 */
                 Node operator=(const Node& other);
 
+                /**
+                 * @brief Destructor to clean up resources.
+                 */
                 ~Node();
         };
 
