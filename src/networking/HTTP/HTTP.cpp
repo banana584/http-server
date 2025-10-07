@@ -290,6 +290,10 @@ HTTP::Responses::ResponseBuilder::ResponseBuilder(std::string filename) {
     // Loop over every line.
     std::string line;
     while (std::getline(this->file, line)) {
+        // Check for comment
+        if (line[0] == '#') {
+            continue;
+        }
         // Extract type: pge = PAGE, api = API, pth = PATH, web = NAME.
         NodeType type;
         if ((line.substr(0, 3)) == "pge") {
