@@ -127,23 +127,31 @@ namespace HTTP {
                  * @param status The status of the response.
                  * @param headers The headers to be used in the response.
                  * @param body The body of the response - actual data.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 HTTPResponse(int status, std::map<std::string, std::string> headers, std::string body);
 
                 /**
                  * @brief Constructor that parses a string into a HTTP response.
                  * @param raw The raw string to be parsed.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 HTTPResponse(std::string raw);
 
                 /**
                  * @brief Destructor to clean up resources.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 ~HTTPResponse();
 
                 /**
                  * @brief Converts a HTTP response to a string.
                  * @return A raw string created with the data of the HTTP response.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 std::string toString();
         };
@@ -151,6 +159,8 @@ namespace HTTP {
         /**
          * @enum NodeType
          * @brief A type for a node in the tree of a website.
+         * @author banana584
+         * @date 6/10/25
          */
         enum NodeType {
             PAGE, ///< A page in the site - leads to html.
@@ -162,6 +172,8 @@ namespace HTTP {
         /**
          * @class Node
          * @brief A node in the tree of a website.
+         * @author banana584
+         * @date 6/10/25
          */
         class Node {
             public:
@@ -204,6 +216,8 @@ namespace HTTP {
     /**
      * @namespace Servers
      * @brief A subset of the HTTP namespace that has classes for a HTTP server.
+     * @author banana584
+     * @date 6/10/25
      */
     namespace Servers {
         struct Data {
