@@ -24,11 +24,15 @@ namespace HTTP {
     /**
      * @namespace Requests
      * @brief A subset of the HTTP namespace that has classes for HTTP Responses.
+     * @author banana584
+     * @date 6/10/25
      */
     namespace Requests {
         /**
          * @class HTTPRequest
          * @brief A representation of a HTTP request.
+         * @author banana584
+         * @date 6/10/25
          */
         class HTTPRequest {
             public:
@@ -43,6 +47,8 @@ namespace HTTP {
                  * @param url The url of the request.
                  * @param headers The headers in the request.
                  * @param body The body of the request, if there is no body leave as an empty string.
+                 * @author banana584
+                 * @date 6/10/25
                  */
                 HTTPRequest(std::string method, std::string url, std::map<std::string, std::string> headers, std::string body);
 
