@@ -17,6 +17,8 @@
 /**
  * @namespace HTTP
  * @brief Handles all HTTP interations
+ * @author banana584
+ * @date 6/10/25
  */
 namespace HTTP {
     /**
