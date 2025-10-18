@@ -2,12 +2,10 @@
 #define DATABASE_DATABASE_HPP
 
 #include <iostream>
+#include <iterator>
 #include <functional>
 #include <fstream>
-#include <bitset>
 #include <deque>
-#include <map>
-#include <memory>
 #include <string.h>
 #include <cstdint>
 
@@ -186,9 +184,14 @@ namespace Databases {
      * @date 11/10/25
      */
     namespace KeyValues {
-        template <typename T> T get(int index, void* args);
+        template <typename T>
+        class KeyValue;
 
-        template <typename T> void write(int index, T data, void* args);
+        template <typename T>
+        T get(int index, void* args);
+
+        template <typename T>
+        void write(int index, T data, void* args);
         
         /**
          * @class Headers
@@ -225,9 +228,12 @@ namespace Databases {
                  */
                 ~Headers();
 
-            friend get;
-            friend write;
-            friend KeyValue;
+                template <typename T>
+                friend T Databases::KeyValues::get(int, void*);
+                template <typename T>
+                friend void Databases::KeyValues::write(int, T, void*);
+                template <typename T>
+                friend class Databases::KeyValues::KeyValue;
         };
 
         /**
@@ -271,7 +277,7 @@ namespace Databases {
                 * @author banana584
                 * @date 8/10/25
                 */
-                T Read(const std::string% key);
+                T Read(const std::string& key);
 
                 /**
                 * @brief Writes to the database.
