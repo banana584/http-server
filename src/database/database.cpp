@@ -115,36 +115,9 @@ void Caches::LRU<T>::Clean() {
     }), data.end());
 }
 
-Databases::KeyValues::Headers(uint64_t num_records, uint64_t record_size) {
-    this->num_records = num_records;
-    this->record_size = record_size;
-}
-
-uint64_t string_to_utint_64(const std::string& str) {
-    uint64_t result = 0;
-    for (char c : str) {
-        result = result * 10 + (c - '0');
-        if (result > std::numeric_limits<uint64_t>::max()) {
-            throw std::out_of_range("String value exceeds uint64_t range");
-        }
-    }
-    return result;
-}
-
-Databases::KeyValues::Headers(std::string raw) {
-    std::string s_raw;
-    for (int i = 0; i < raw.length(); i += 2) {
-        std::string hex_digits = raw.substr(i, 2);
-        char character = static_cast<char>(std::stoi(hex_digits, nullptr, 16));
-        s_raw += character;
-    }
-
-    this->num_records = string_to_uint_64(s_raw.substr(0, 64));
-    this->record_size = string_to_uint_64(s_raw.substr(64));
-}
-
-Databases::KeyValues::~Headers() {
-    return;
+template <typename T>
+std::istream_iterator<T> Caches::LRU<T>::get_iterator() {
+    return std::istream_iterator<T>(data.begin(), data.end());
 }
 
 template <typename T>
@@ -221,4 +194,91 @@ void Databases::KeyValues::write(int index, T data, void* args) {
     fseek(db->file, SEEK_SET, 0);
 
     db->file.write(buffer.data(), buffer.size());
+}
+
+Databases::KeyValues::Headers(uint64_t num_records, uint64_t record_size) {
+    this->num_records = num_records;
+    this->record_size = record_size;
+}
+
+static uint64_t string_to_utint_64(const std::string& str) {
+    uint64_t result = 0;
+    for (char c : str) {
+        result = result * 10 + (c - '0');
+        if (result > std::numeric_limits<uint64_t>::max()) {
+            throw std::out_of_range("String value exceeds uint64_t range");
+        }
+    }
+    return result;
+}
+
+Databases::KeyValues::Headers(std::string raw) {
+    std::string s_raw;
+    for (int i = 0; i < raw.length(); i += 2) {
+        std::string hex_digits = raw.substr(i, 2);
+        char character = static_cast<char>(std::stoi(hex_digits, nullptr, 16));
+        s_raw += character;
+    }
+
+    this->num_records = string_to_uint_64(s_raw.substr(0, 64));
+    this->record_size = string_to_uint_64(s_raw.substr(64, 64));
+}
+
+Databases::KeyValues::~Headers() {
+    return;
+}
+
+static size_t hash(const std::string& str) {
+    size_t hash = 0;
+    for (char c : str) {
+        hash = 31 * hash + c;
+    }
+    return hash;
+}
+
+template <typename T>
+static size_t get_index(const std::string& key, const std::istream_iterator<T>& it) {
+    size_t index = hash(key) % it.size();
+    for (;index < it.size(); it++) {
+        if (*it == key) {
+            return index;
+        }
+        index++;
+    }
+    return -1;
+}
+
+template <typename T>
+Databases::KeyValues::KeyValue<T>::KeyValue(const std::string& filename, const bool save_on_exit) {
+    this->filename = filename;
+    this->file = std::fstream(filename);
+    this->data = Caches::LRU<T>(std::filesystem::file_size(filename) / 0.3, 3, get, this, write, this);
+    this->save_on_exit = save_on_exit;
+    char buffer[129];
+    file.read(buffer, 128);
+    this->headers = Headers(buffer);
+}
+
+template <typename T>
+Databases::KeyValues::KeyValue<T>::~KeyValue() {
+    if (save_on_exit) {
+        Save();
+    }
+    file.close();
+}
+
+template <typename T>
+T Databases::KeyValues::KeyValue<T>::Read(const std::string& key) {
+    size_t index = get_index<T>(key, data.get_iterator());
+
+    return data.Get(index);
+}
+
+template <typename T>
+bool Databases::KeyValues::KeyValue<T>::Write(const std::string& key, T& data) {
+    size_t index = get_index<T>(key, this->data.get_iterator());
+
+    this->data.Write(index, data);
+
+    return 0;
 }

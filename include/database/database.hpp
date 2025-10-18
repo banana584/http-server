@@ -167,6 +167,8 @@ namespace Caches {
              * @date 11/10/25
              */
             void Clean();
+
+            std::istream_iterator<T> get_iterator();
     };
 }
 
@@ -222,6 +224,10 @@ namespace Databases {
                  * @date 12/10/25
                  */
                 ~Headers();
+
+            friend get;
+            friend write;
+            friend KeyValue;
         };
 
         /**
@@ -232,9 +238,11 @@ namespace Databases {
         */
         template <typename T>
         class KeyValue {
-            private:
-                Caches::LRU<std::map<std::string, T>> map; ///< In-memory representation.
+            protected:
+                bool save_on_exit;
+                Caches::LRU<std::pair<std::string, T>> data; ///< In-memory representation.
                 std::fstream file; ///< File to read from and write to.
+                Headers headers;
             public:
                 std::string filename; ///< The name of the file used.
             private:
@@ -257,39 +265,23 @@ namespace Databases {
                 ~KeyValue();
 
                 /**
-                * @brief Loads from the file.
-                * @return a boolean on whether the database was loaded correctly.
-                * @author banana584
-                * @date 8/10/25
-                */
-                bool Load();
-
-                /**
-                * @brief Saves to the file.
-                * @return A boolean on whether the database was saved correctly.
-                * @author banana584
-                * @date 8/10/25
-                */
-                bool Save();
-
-                /**
                 * @brief Reads from the database.
                 * @param key The key to use.
                 * @return The data found.
                 * @author banana584
                 * @date 8/10/25
                 */
-                T Read(std::string key);
+                T Read(const std::string% key);
 
                 /**
                 * @brief Writes to the database.
                 * @param key The key to use.
                 * @param data The data to write.
-                * @return A boolean on whether the database was written to correctly.
+                * @return A boolean on whether the database was written to correctly - 0 is success, 1 is failure.
                 * @author banana584
                 * @date 8/10/25
                 */
-                bool Write(std::string key, T& data);
+                bool Write(const std::string& key, T& data);
         };
     }
 }
